@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model School {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  createdAt DateTime @default(now())
+
+  classes Class[]
+  users   User[]
+}
+
+model Class {
+  id        String   @id @default(cuid())
+  name      String
+  grade     String
+  year      Int
+  schoolId  String
+  createdAt DateTime @default(now())
+
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  students User[] @relation("ClassStudents")
+  teachers User[] @relation("ClassTeachers")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  fullName  String
+  role      String   @default("student")
+  schoolId  String
+  classId   String?
+  createdAt DateTime @default(now())
+
+  school         School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  studentClass   Class?      @relation("ClassStudents", fields: [classId], references: [id])
+  teacherClasses Class[]     @relation("ClassTeachers")
+  auraEvents     AuraEvent[] @relation("StudentAura")
+  auraGiven      AuraEvent[] @relation("TeacherAura")
+}
+
+model AuraEvent {
+  id        String   @id @default(cuid())
+  studentId String
+  teacherId String
+  delta     Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  student User @relation("StudentAura", fields: [studentId], references: [id], onDelete: Cascade)
+  teacher User @relation("TeacherAura", fields: [teacherId], references: [id])
+}
