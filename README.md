@@ -1,36 +1,196 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Aura — Plataforma de Gestão Educacional Gamificada
 
-## Getting Started
+Sistema web para professores gerenciarem o engajamento de alunos por meio de um sistema de pontos chamado **Aura**. Professores atribuem ou removem pontos com base no comportamento dos alunos; os alunos sobem ou descem no ranking da turma.
 
-First, run the development server:
+---
+
+## Stack
+
+| Camada | Tecnologia |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Linguagem | TypeScript 5 |
+| Estilo | Tailwind CSS 4 |
+| Banco de dados | SQLite via Prisma 5 |
+| Autenticação | JWT (`jose`) em cookie httpOnly |
+| Runtime | Node.js |
+
+---
+
+## Pré-requisitos
+
+- Node.js 18+
+- npm 9+
+
+---
+
+## Instalação
 
 ```bash
+# 1. Clonar o repositório
+git clone https://github.com/Gustavo-J-C/george.git
+cd george/aura
+
+# 2. Instalar dependências
+npm install
+
+# 3. Configurar variáveis de ambiente
+cp .env.example .env
+# Edite .env com suas configurações (veja seção abaixo)
+
+# 4. Criar e migrar o banco de dados
+npx prisma migrate dev
+
+# 5. Popular com dados de exemplo
+npm run seed
+
+# 6. Iniciar o servidor de desenvolvimento
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Variáveis de ambiente
 
-## Learn More
+Crie um arquivo `.env` na raiz do projeto:
 
-To learn more about Next.js, take a look at the following resources:
+```env
+DATABASE_URL="file:./dev.db"
+JWT_SECRET="sua-chave-secreta-aqui"
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variável | Descrição |
+|---|---|
+| `DATABASE_URL` | Caminho para o arquivo SQLite |
+| `JWT_SECRET` | Segredo para assinar os tokens JWT (use uma string longa e aleatória em produção) |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Usuários de exemplo (seed)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Após rodar `npm run seed`:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Usuário | Papel | Senha |
+|---|---|---|
+| `admin` | Administrador | *(sem senha — MVP)* |
+| `prof.carlos` | Professor | *(sem senha — MVP)* |
+| `aluno.001` … `aluno.014` | Aluno | *(sem senha — MVP)* |
+
+> O login é feito apenas com o nome de usuário (sem senha) no MVP.
+
+---
+
+## Estrutura de pastas
+
+```
+aura/
+├── prisma/
+│   ├── schema.prisma       # Modelos do banco de dados
+│   └── seed.ts             # Dados iniciais
+├── src/
+│   ├── app/
+│   │   ├── (dashboard)/    # Páginas autenticadas
+│   │   │   ├── home/       # Dashboard principal
+│   │   │   ├── students/   # Lista de alunos + modal de Aura
+│   │   │   ├── ranking/    # Ranking gamificado
+│   │   │   └── admin/      # Gestão de escolas, turmas e usuários
+│   │   ├── login/          # Tela de login
+│   │   └── api/            # Rotas da API REST
+│   ├── components/
+│   │   ├── AuraModal.tsx   # Modal de gerenciamento de Aura
+│   │   ├── Sidebar.tsx     # Navegação lateral responsiva
+│   │   ├── Skeleton.tsx    # Componentes de loading skeleton
+│   │   └── Toast.tsx       # Notificações toast
+│   ├── lib/
+│   │   ├── auth.ts         # JWT: signToken, verifyToken, getSession
+│   │   └── prisma.ts       # Singleton do Prisma Client
+│   └── proxy.ts            # Middleware de autenticação (Next.js 16)
+└── .env                    # Variáveis de ambiente (não versionado)
+```
+
+---
+
+## Modelo de dados
+
+```
+School (Escola)
+  └── Class (Turma)
+       └── User (Usuário) — papel: admin | professor | student
+            └── AuraEvent (Evento de Aura)
+                  delta: Int    (positivo = ganhou, negativo = perdeu)
+                  reason: String
+```
+
+---
+
+## API
+
+Todas as rotas exigem sessão autenticada (cookie `aura_token`), exceto `/api/auth/login`.
+
+| Método | Rota | Descrição | Roles |
+|---|---|---|---|
+| POST | `/api/auth/login` | Login por username | — |
+| POST | `/api/auth/logout` | Logout | todos |
+| GET | `/api/students` | Lista alunos (filtros: `classId`, `search`) | todos |
+| GET | `/api/ranking` | Ranking por Aura (filtro: `classId`) | todos |
+| GET/POST | `/api/aura` | Histórico / aplicar Aura | GET: todos · POST: professor+ |
+| GET/POST | `/api/schools` | Lista / criar escola | admin |
+| PUT/DELETE | `/api/schools/[id]` | Editar / deletar escola | admin |
+| GET/POST | `/api/classes` | Lista / criar turma | admin+ |
+| PUT/DELETE | `/api/classes/[id]` | Editar / deletar turma | admin+ |
+| GET/POST | `/api/users` | Lista / criar usuário | admin |
+| PUT/DELETE | `/api/users/[id]` | Editar / deletar usuário | admin |
+| POST | `/api/users/import` | Importar alunos via CSV | admin |
+
+### Formato do CSV de importação
+
+```csv
+fullName,username,role,classId
+João Silva,joao.silva,student,<id-da-turma>
+Maria Souza,maria.souza,student,<id-da-turma>
+```
+
+---
+
+## Papéis e permissões
+
+| Papel | Pode fazer |
+|---|---|
+| `student` | Apenas visualizar (sem acesso ao painel) |
+| `professor` | Aplicar/remover Aura, ver alunos e ranking |
+| `admin` | Tudo acima + gerenciar escolas, turmas e usuários |
+
+---
+
+## Sistema de Aura (níveis)
+
+| Pontuação | Nível |
+|---|---|
+| ≥ 50 | Lendário |
+| 20 – 49 | Destaque |
+| 0 – 19 | Regular |
+| < 0 | Em risco |
+
+---
+
+## Scripts disponíveis
+
+```bash
+npm run dev      # Servidor de desenvolvimento (Turbopack)
+npm run build    # Build de produção
+npm run start    # Servidor de produção
+npm run seed     # Popular banco com dados de exemplo
+npm run lint     # Verificar erros de lint
+```
+
+---
+
+## Deploy
+
+1. Defina `DATABASE_URL` e `JWT_SECRET` nas variáveis de ambiente do servidor.
+2. Execute `npx prisma migrate deploy` para aplicar as migrations.
+3. Execute `npm run build && npm run start`.
+
+> Para produção, considere substituir o SQLite por PostgreSQL ou MySQL atualizando o `provider` no `schema.prisma` e a `DATABASE_URL`.
