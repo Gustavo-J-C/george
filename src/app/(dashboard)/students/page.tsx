@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import AuraModal from "@/components/AuraModal";
+import { SkeletonList } from "@/components/Skeleton";
 
 interface Student {
   id: string;
@@ -13,6 +14,23 @@ interface Student {
 interface Class {
   id: string;
   name: string;
+}
+
+function auraLevel(aura: number) {
+  if (aura >= 50) return { badge: "bg-yellow-50 text-yellow-700 border-yellow-200", label: "Lendário" };
+  if (aura >= 20) return { badge: "bg-green-50 text-green-700 border-green-200", label: "Destaque" };
+  if (aura >= 0)  return { badge: "bg-blue-50 text-blue-700 border-blue-200",    label: "Regular" };
+  return               { badge: "bg-red-50 text-red-700 border-red-200",          label: "Em risco" };
+}
+
+function Initials({ name }: { name: string }) {
+  const parts = name.trim().split(" ");
+  const letters = parts.length >= 2 ? parts[0][0] + parts[parts.length - 1][0] : parts[0].slice(0, 2);
+  return (
+    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0 select-none">
+      {letters.toUpperCase()}
+    </div>
+  );
 }
 
 export default function StudentsPage() {
@@ -43,37 +61,31 @@ export default function StudentsPage() {
     return () => clearTimeout(t);
   }, [fetchStudents]);
 
-  function auraColor(aura: number) {
-    if (aura >= 50) return "text-yellow-500";
-    if (aura >= 20) return "text-green-500";
-    if (aura >= 0) return "text-blue-500";
-    return "text-red-500";
-  }
-
-  function auraBadge(aura: number) {
-    if (aura >= 50) return "bg-yellow-50 text-yellow-700 border-yellow-200";
-    if (aura >= 20) return "bg-green-50 text-green-700 border-green-200";
-    if (aura >= 0) return "bg-blue-50 text-blue-700 border-blue-200";
-    return "bg-red-50 text-red-700 border-red-200";
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Alunos</h1>
-          <p className="text-gray-500 text-sm mt-1">{students.length} aluno(s) encontrado(s)</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {loading ? "Carregando…" : `${students.length} aluno${students.length !== 1 ? "s" : ""} encontrado${students.length !== 1 ? "s" : ""}`}
+          </p>
         </div>
       </div>
 
+      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          type="text"
-          placeholder="Buscar por nome…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-100 outline-none text-sm"
-        />
+        <div className="relative flex-1">
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar por nome…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-100 outline-none text-sm"
+          />
+        </div>
         <select
           value={classId}
           onChange={(e) => setClassId(e.target.value)}
@@ -86,45 +98,75 @@ export default function StudentsPage() {
         </select>
       </div>
 
+      {/* Content */}
       {loading ? (
-        <div className="text-center py-12 text-gray-400">Carregando…</div>
+        <SkeletonList rows={6} />
       ) : students.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">Nenhum aluno encontrado.</div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-16 text-center">
+          <p className="text-5xl mb-3">🔍</p>
+          <p className="text-gray-800 font-semibold text-base">Nenhum aluno encontrado</p>
+          <p className="text-gray-400 text-sm mt-1">Tente ajustar os filtros de busca</p>
+        </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          {/* Desktop header */}
           <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto] px-6 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
             <span>Aluno</span>
             <span className="text-center w-24">Turma</span>
-            <span className="text-center w-24">Aura</span>
+            <span className="text-center w-28">Aura</span>
             <span className="w-28" />
           </div>
           <div className="divide-y divide-gray-50">
-            {students.map((student) => (
-              <div key={student.id} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] items-center px-6 py-4 hover:bg-gray-50 gap-2">
-                <div>
-                  <p className="font-medium text-gray-900">{student.fullName}</p>
-                  <p className="text-xs text-gray-400">@{student.username}</p>
+            {students.map((student) => {
+              const level = auraLevel(student.aura);
+              return (
+                <div key={student.id} className="flex sm:grid sm:grid-cols-[1fr_auto_auto_auto] items-center px-4 sm:px-6 py-3.5 hover:bg-gray-50 transition gap-3">
+                  {/* Avatar + name */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <Initials name={student.fullName} />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-900 text-sm truncate">{student.fullName}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-xs text-gray-400">@{student.username}</p>
+                        {/* Class shown inline on mobile */}
+                        {student.studentClass && (
+                          <span className="sm:hidden text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
+                            {student.studentClass.name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Class — desktop only */}
+                  <div className="hidden sm:flex justify-center w-24">
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                      {student.studentClass?.name ?? "—"}
+                    </span>
+                  </div>
+                  {/* Aura badge */}
+                  <div className="hidden sm:flex justify-center w-28">
+                    <span className={`text-xs font-bold border px-2.5 py-1 rounded-full ${level.badge}`}>
+                      {student.aura > 0 ? "+" : ""}{student.aura} ✨
+                    </span>
+                  </div>
+                  {/* Mobile aura + button */}
+                  <div className="flex sm:hidden items-center gap-2 shrink-0">
+                    <span className={`text-xs font-bold border px-2 py-0.5 rounded-full ${level.badge}`}>
+                      {student.aura > 0 ? "+" : ""}{student.aura}✨
+                    </span>
+                  </div>
+                  {/* Action */}
+                  <div className="w-28 flex justify-end shrink-0">
+                    <button
+                      onClick={() => setSelectedStudent(student)}
+                      className="text-sm font-semibold text-violet-600 hover:text-violet-800 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-lg transition active:scale-95"
+                    >
+                      Gerenciar
+                    </button>
+                  </div>
                 </div>
-                <div className="text-center w-24">
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                    {student.studentClass?.name ?? "—"}
-                  </span>
-                </div>
-                <div className="text-center w-24">
-                  <span className={`text-sm font-bold border px-2.5 py-1 rounded-full ${auraBadge(student.aura)}`}>
-                    {student.aura > 0 ? "+" : ""}{student.aura} ✨
-                  </span>
-                </div>
-                <div className="w-28 flex justify-end">
-                  <button
-                    onClick={() => setSelectedStudent(student)}
-                    className="text-sm font-medium text-violet-600 hover:text-violet-800 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-lg transition"
-                  >
-                    Gerenciar
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

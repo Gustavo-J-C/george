@@ -42,8 +42,12 @@ export default function Sidebar({ role, fullName }: SidebarProps) {
           <span className="text-xl">✨</span>
           <span className="text-white font-bold">Aura</span>
         </div>
-        <button onClick={() => setOpen(!open)} className="text-white p-1">
-          {open ? "✕" : "☰"}
+        <button onClick={() => setOpen(!open)} className="text-white p-1.5 rounded-lg hover:bg-white/10 transition" aria-label="Menu">
+          {open ? (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          ) : (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+          )}
         </button>
       </div>
 
@@ -111,8 +115,8 @@ export default function Sidebar({ role, fullName }: SidebarProps) {
 
         <div className="px-4 py-4 border-t border-white/10">
           <div className="flex items-center gap-3 px-3 py-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-violet-400 flex items-center justify-center text-sm font-bold text-white">
-              {fullName.charAt(0).toUpperCase()}
+            <div className="w-8 h-8 rounded-full bg-violet-400 flex items-center justify-center text-xs font-bold text-white select-none shrink-0">
+              {(() => { const p = fullName.trim().split(" "); return p.length >= 2 ? (p[0][0] + p[p.length - 1][0]).toUpperCase() : p[0].slice(0, 2).toUpperCase(); })()}
             </div>
             <p className="text-sm text-white font-medium truncate">{fullName}</p>
           </div>
@@ -120,7 +124,10 @@ export default function Sidebar({ role, fullName }: SidebarProps) {
             onClick={logout}
             className="w-full text-left px-3 py-2 text-sm text-purple-300 hover:text-white hover:bg-white/8 rounded-xl transition"
           >
-            ↩ Sair
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+              Sair
+            </span>
           </button>
         </div>
       </aside>
